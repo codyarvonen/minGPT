@@ -4,6 +4,8 @@ so nothing in this file really has anything to do with GPT specifically.
 """
 
 import time
+import pickle
+from tqdm import tqdm
 from collections import defaultdict
 
 import torch
@@ -73,11 +75,13 @@ class Trainer:
             batch_size=config.batch_size,
             num_workers=config.num_workers,
         )
-
+        
         model.train()
         self.iter_num = 0
         self.iter_time = time.time()
         data_iter = iter(train_loader)
+        pbar = tqdm()
+        loss_vals = []
         while True:
 
             # fetch the next batch (x, y) and re-init iterator if needed
@@ -91,6 +95,7 @@ class Trainer:
 
             # forward the model
             logits, self.loss = model(x, y)
+            loss_vals.append(self.loss.item())
 
             # backprop and update the parameters
             model.zero_grad(set_to_none=True)
@@ -103,6 +108,16 @@ class Trainer:
             tnow = time.time()
             self.iter_dt = tnow - self.iter_time
             self.iter_time = tnow
+            
+            if self.iter_num % config.save_iterations == config.save_iterations - 1:
+                torch.save({'model_transformer': model.transformer.state_dict(), 
+                            'model_lm_head': model.lm_head.state_dict(), 
+                            'optimizer_state_dict': self.optimizer.state_dict()}, 
+                           f'checkpoint_{self.iter_num}.pt')
+                with open('loss.pkl', 'wb') as file:
+                    pickle.dump(loss_vals, file)
+                
+            pbar.update(1)
 
             # termination conditions
             if config.max_iters is not None and self.iter_num >= config.max_iters:

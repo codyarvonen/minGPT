@@ -149,6 +149,13 @@ class GPT(nn.Module):
             ln_f = nn.LayerNorm(config.n_embd),
         ))
         self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=False)
+        
+        if config.checkpoint_path is not None:
+            self.checkpoint = torch.load(config.checkpoint_path)
+            self.transformer.load_state_dict(self.checkpoint['model_transformer'])
+            self.lm_head.load_state_dict(self.checkpoint['model_lm_head'])
+        else:
+            self.checkpoint = None
 
         # init all weights, and apply a special scaled init to the residual projections, per GPT-2 paper
         self.apply(self._init_weights)
@@ -255,6 +262,10 @@ class GPT(nn.Module):
             {"params": [param_dict[pn] for pn in sorted(list(no_decay))], "weight_decay": 0.0},
         ]
         optimizer = torch.optim.AdamW(optim_groups, lr=train_config.learning_rate, betas=train_config.betas)
+
+        if self.checkpoint:
+            optimizer.load_state_dict(self.checkpoint['optimizer_state_dict'])
+
         return optimizer
 
     def forward(self, idx, targets=None):
