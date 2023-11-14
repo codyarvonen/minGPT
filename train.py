@@ -53,11 +53,11 @@ class TextDataset(Dataset):
         # grab a chunk of (block_size + 1) characters from the data
         chunk = tokens[:self.config.block_size + 1]
 
-        self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
+        # self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
 
         # Pad the chunk if it is smaller than the block size
         if len(chunk) < self.config.block_size + 1:
-            chunk += [self.tokenizer.pad_token_id] * (self.config.block_size + 1 - len(chunk))
+            chunk += [self.tokenizer.eos_token_id] * (self.config.block_size + 1 - len(chunk))
         
         # return as tensors
         x = torch.tensor(chunk[:-1], dtype=torch.long)
