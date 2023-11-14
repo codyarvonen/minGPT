@@ -20,7 +20,7 @@ class Trainer:
         # device to train on
         C.device = 'auto'
         # dataloder parameters
-        C.num_workers = 4
+        C.num_workers = 1
         # optimizer parameters
         C.max_iters = None
         C.batch_size = 64
