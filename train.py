@@ -64,7 +64,7 @@ class TextDataset(Dataset):
 
         span_length = max(2, int(random.gauss(3, 1)))
         corruption_rate = 0.15
-        num_corrupt_seqs = int(corruption_rate * len(tokens)) / span_length
+        num_corrupt_seqs = int(corruption_rate * len(tokens) / span_length)
         corrupt_indices = random.sample(range(len(tokens) - span_length), num_corrupt_seqs)
         for idx in corrupt_indices:
             tokens[idx] = [self.tokenizer.mask_token]
@@ -91,7 +91,7 @@ class TextDataset(Dataset):
             span_length = max(2, int(random.gauss(3, 1)))
             corruption_rate = min(0.5, random.uniform(0, 0.5))
 
-        num_corrupt_seqs = int(corruption_rate * len(tokens)) / span_length
+        num_corrupt_seqs = int(corruption_rate * len(tokens) / span_length)
         corrupt_indices = random.sample(range(len(tokens) - span_length), num_corrupt_seqs)
         for idx in corrupt_indices:
             tokens[idx] = [self.tokenizer.mask_token]
