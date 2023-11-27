@@ -67,7 +67,7 @@ class TextDataset(Dataset):
         num_corrupt_seqs = int(corruption_rate * len(tokens) / span_length)
         corrupt_indices = random.sample(range(len(tokens) - span_length), num_corrupt_seqs)
         for idx in corrupt_indices:
-            tokens[idx] = [self.tokenizer.convert_tokens_to_ids("<M>")]
+            tokens[idx] = self.tokenizer.convert_tokens_to_ids("<M>")
             tokens[idx + 1:idx + span_length] = [-1] * (span_length - 1)
         tokens = tokens[tokens != -1]
         targets = [self.tokenizer.convert_tokens_to_ids("<B>")]
@@ -94,7 +94,7 @@ class TextDataset(Dataset):
         num_corrupt_seqs = int(corruption_rate * len(tokens) / span_length)
         corrupt_indices = random.sample(range(len(tokens) - span_length), num_corrupt_seqs)
         for idx in corrupt_indices:
-            tokens[idx] = [self.tokenizer.convert_tokens_to_ids("<M>")]
+            tokens[idx] = self.tokenizer.convert_tokens_to_ids("<M>")
             tokens[idx + 1:idx + span_length] = [-1] * (span_length - 1)
         tokens = tokens[tokens != -1]
         targets = [self.tokenizer.convert_tokens_to_ids("<B>")]
