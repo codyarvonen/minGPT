@@ -9,6 +9,10 @@
 #SBATCH --qos=cs
 #SBATCH --partition=cs
 #SBATCH --time=4:00:00
+nvidia-smi --list-gpus
+nvidia-smi --query-gpu=memory.total --format=csv
 module load python/3.11
+cd ~/compute
 source gptenv/bin/activate
-python train.py
+cd ~/minGPT
+python3 train.py
