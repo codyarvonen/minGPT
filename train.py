@@ -69,7 +69,7 @@ class TextDataset(Dataset):
         for idx in corrupt_indices:
             tokens[idx] = self.tokenizer.convert_tokens_to_ids("<M>")
             tokens[idx + 1:idx + span_length] = [-1] * (span_length - 1)
-        tokens = tokens[tokens != -1]
+        tokens = [token for token in tokens if token != -1]
         targets = [self.tokenizer.convert_tokens_to_ids("<B>")]
         for i in range(num_corrupt_seqs):
             targets.append(self.tokenizer.convert_tokens_to_ids("<M>"))
@@ -96,7 +96,7 @@ class TextDataset(Dataset):
         for idx in corrupt_indices:
             tokens[idx] = self.tokenizer.convert_tokens_to_ids("<M>")
             tokens[idx + 1:idx + span_length] = [-1] * (span_length - 1)
-        tokens = tokens[tokens != -1]
+        tokens = [token for token in tokens if token != -1]
         targets = [self.tokenizer.convert_tokens_to_ids("<B>")]
         for i in range(num_corrupt_seqs):
             targets.append(self.tokenizer.convert_tokens_to_ids("<M>"))
@@ -113,7 +113,7 @@ class TextDataset(Dataset):
         span_length = random.randint(0, len(tokens) - 1)
         tokens[span_length] = self.tokenizer.convert_tokens_to_ids("<M>")
         tokens[span_length + 1:] = [-1] * (span_length - 1)
-        tokens = tokens[tokens != -1]
+        tokens = [token for token in tokens if token != -1]
         targets = [self.tokenizer.convert_tokens_to_ids("<B>"), self.tokenizer.convert_tokens_to_ids("<M>"), self.tokenizer.convert_tokens_to_ids("<E>")]
         return tokens, targets
 
