@@ -35,12 +35,14 @@ class TextDataset(Dataset):
             self.tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
             self.tokenizer.save_pretrained(config.tokenizer_path)
 
-        # special_tokens_dict = {"regular": "[R]", "sequential": "[S]", "extreme": "[X]", "begin": "<B>", "space": "<S>", "end": "<E>"}
-        # self.tokenizer.add_special_tokens(special_tokens_dict)
+        special_tokens = ["[R]", "[S]", "[X]"]
+        for x in range(512):
+            if x < 155:
+                special_tokens.append(f"<r-noise-{x}")
+            special_tokens.append(f"<x-noise-{x}")
+            special_tokens.append(f"<s-noise-{x}")
 
-        self.tokenizer.add_tokens(["[R]", "[S]", "[X]", "<B>", "<M>", "<S>", "<E>"], special_tokens=True)
-        # Notice: resize_token_embeddings expect to receive the full size of the new vocabulary, i.e., the length of the tokenizer.
-        # model.resize_token_embeddings(len(tokenizer))
+        self.tokenizer.add_tokens(special_tokens, special_tokens=True)
 
         with open(config.data_path, 'r') as file:
             self.data = file.readlines()
@@ -66,16 +68,9 @@ class TextDataset(Dataset):
         corruption_rate = 0.15
         num_corrupt_seqs = int(corruption_rate * len(tokens) / span_length)
         corrupt_indices = random.sample(range(len(tokens) - span_length), num_corrupt_seqs)
-        for idx in corrupt_indices:
-            tokens[idx] = self.tokenizer.convert_tokens_to_ids("<M>")
-            tokens[idx + 1:idx + span_length] = [-1] * (span_length - 1)
-        tokens = [token for token in tokens if token != -1]
-        targets = [self.tokenizer.convert_tokens_to_ids("<B>")]
-        for i in range(num_corrupt_seqs):
-            targets.append(self.tokenizer.convert_tokens_to_ids("<M>"))
-            targets.append(self.tokenizer.convert_tokens_to_ids("<S>"))
-        targets.append(self.tokenizer.convert_tokens_to_ids("<E>"))
-        return tokens, targets
+        for n, idx in enumerate(corrupt_indices):
+            tokens[idx:idx + span_length] = [self.tokenizer.convert_tokens_to_ids(f"<r-noise-{x}") for x in range(n * span_length, n * span_length + span_length)]
+        return tokens
 
     def extreme_denoising(self, tokens):
         # Implement extreme denoising task
@@ -93,16 +88,9 @@ class TextDataset(Dataset):
 
         num_corrupt_seqs = int(corruption_rate * len(tokens) / span_length)
         corrupt_indices = random.sample(range(len(tokens) - span_length), num_corrupt_seqs)
-        for idx in corrupt_indices:
-            tokens[idx] = self.tokenizer.convert_tokens_to_ids("<M>")
-            tokens[idx + 1:idx + span_length] = [-1] * (span_length - 1)
-        tokens = [token for token in tokens if token != -1]
-        targets = [self.tokenizer.convert_tokens_to_ids("<B>")]
-        for i in range(num_corrupt_seqs):
-            targets.append(self.tokenizer.convert_tokens_to_ids("<M>"))
-            targets.append(self.tokenizer.convert_tokens_to_ids("<S>"))
-        targets.append(self.tokenizer.convert_tokens_to_ids("<E>"))
-        return tokens, targets
+        for n, idx in enumerate(corrupt_indices):
+            tokens[idx:idx + span_length] = [self.tokenizer.convert_tokens_to_ids(f"<x-noise-{x}") for x in range(n * span_length, n * span_length + span_length)]
+        return tokens
 
     def sequential_denoising(self, tokens):
         # Implement sequential denoising (PrefixLM) task
@@ -111,11 +99,8 @@ class TextDataset(Dataset):
         if len(tokens) > self.config.block_size:
             tokens = tokens[:self.config.block_size]
         span_length = random.randint(0, len(tokens) - 1)
-        tokens[span_length] = self.tokenizer.convert_tokens_to_ids("<M>")
-        tokens[span_length + 1:] = [-1] * (span_length - 1)
-        tokens = [token for token in tokens if token != -1]
-        targets = [self.tokenizer.convert_tokens_to_ids("<B>"), self.tokenizer.convert_tokens_to_ids("<M>"), self.tokenizer.convert_tokens_to_ids("<E>")]
-        return tokens, targets
+        tokens[span_length:] = [self.tokenizer.convert_tokens_to_ids(f"<s-noise-{x}") for x in range(span_length)]
+        return tokens
 
     def __getitem__(self, idx):
         text = json.loads(self.data[idx]).get('text')   
@@ -139,27 +124,32 @@ class TextDataset(Dataset):
 
 
             masked_tokens = []
-            target = []
             # Apply denoising tasks
             if random.random() < 0.5:
-                masked_tokens, target = self.sequential_denoising(chunk)
+                masked_tokens = self.sequential_denoising(chunk)
             elif random.random() < 0.75:
-                masked_tokens, target = self.extreme_denoising(chunk)
+                masked_tokens = self.extreme_denoising(chunk)
             else:
-                masked_tokens, target = self.regular_denoising(chunk)
+                masked_tokens = self.regular_denoising(chunk)
 
-            print(masked_tokens, target)
+
+            chunk.insert(0, self.tokenizer.convert_tokens_to_ids("<B>"))
+            if len(chunk) > self.config.block_size:
+                chunk = chunk[:self.config.block_size]
             
             # Pad the chunk if it is smaller than the block size
             if len(masked_tokens) < self.config.block_size:
                 masked_tokens += [self.tokenizer.eos_token_id] * (self.config.block_size - len(masked_tokens))
 
-            if len(target) < self.config.block_size:
-                target += [self.tokenizer.eos_token_id] * (self.config.block_size - len(target))
+            if len(chunk) < self.config.block_size:
+                chunk += [self.tokenizer.eos_token_id] * (self.config.block_size - len(chunk))
+
+            assert len(masked_tokens) == self.config.block_size
+            assert len(chunk) == self.config.block_size
 
             # return as tensors
             x = torch.tensor(masked_tokens, dtype=torch.long)
-            y = torch.tensor(target, dtype=torch.long)
+            y = torch.tensor(chunk, dtype=torch.long)
             return x, y
 
 
@@ -167,7 +157,7 @@ def train():
     print("Creating model")
     model_config = GPT.get_default_config()
     model_config.model_type = 'gpt-mini'
-    model_config.vocab_size = 50263
+    model_config.vocab_size = 50257 + 1182
     model_config.block_size = 1024
     model_config.checkpoint_path = 'checkpoint_3999.pt'
     model_config.use_causal_attention_mask = False
