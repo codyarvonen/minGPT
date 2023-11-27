@@ -22,7 +22,7 @@ class TextDataset(Dataset):
         C.vocab_size = 50257
         C.block_size = 1024
         C.data_path = 'pile_data_10.jsonl'
-        C.tokenizer_path = 'tokenizer_weights.pt'
+        C.tokenizer_path = 'tokenizer_weights_2.pt'
         C.perform_denoising = False
 
         return C
@@ -35,9 +35,10 @@ class TextDataset(Dataset):
             self.tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
             self.tokenizer.save_pretrained(config.tokenizer_path)
 
-        special_tokens_dict = {"regular": "[R]", "sequential": "[S]", "extreme": "[X]", "begin": "<B>", "space": "<S>", "end": "<E>"}
-        GPT2Tokenizer().mask_token
-        self.tokenizer.add_special_tokens(special_tokens_dict)
+        # special_tokens_dict = {"regular": "[R]", "sequential": "[S]", "extreme": "[X]", "begin": "<B>", "space": "<S>", "end": "<E>"}
+        # self.tokenizer.add_special_tokens(special_tokens_dict)
+
+        self.tokenizer.add_tokens(["[R]", "[S]", "[X]", "<B>", "<S>", "<E>"], special_tokens=True)
         # Notice: resize_token_embeddings expect to receive the full size of the new vocabulary, i.e., the length of the tokenizer.
         # model.resize_token_embeddings(len(tokenizer))
 
@@ -57,7 +58,7 @@ class TextDataset(Dataset):
     def regular_denoising(self, tokens):
         # Implement regular span corruption task
         # Sample spans with a mean length of 3 and corruption rate of 15%
-        tokens.insert(0, self.tokenizer.regular)
+        tokens.insert(0, self.tokenizer.convert_tokens_to_ids("[R]"))
         if len(tokens) > self.config.block_size:
             tokens = tokens[:self.config.block_size]
 
@@ -69,17 +70,17 @@ class TextDataset(Dataset):
             tokens[idx] = [self.tokenizer.mask_token]
             tokens[idx + 1:idx + span_length] = [-1] * (span_length - 1)
         tokens = tokens[tokens != -1]
-        targets = [self.tokenizer.begin]
+        targets = [self.tokenizer.convert_tokens_to_ids("<B>")]
         for i in range(num_corrupt_seqs):
             targets.append(self.tokenizer.mask_token)
-            targets.append(self.tokenizer.space)
-        targets.append(self.tokenizer.end)
+            targets.append(self.tokenizer.convert_tokens_to_ids("<S>"))
+        targets.append(self.tokenizer.convert_tokens_to_ids("<E>"))
         return tokens, targets
 
     def extreme_denoising(self, tokens):
         # Implement extreme denoising task
         # Sample spans with a mean length of 32 or corruption rate of up to 50%
-        tokens.insert(0, self.tokenizer.extreme)
+        tokens.insert(0, self.tokenizer.convert_tokens_to_ids("[X]"))
         if len(tokens) > self.config.block_size:
             tokens = tokens[:self.config.block_size]
         corruption_rate = 0.5
@@ -96,24 +97,24 @@ class TextDataset(Dataset):
             tokens[idx] = [self.tokenizer.mask_token]
             tokens[idx + 1:idx + span_length] = [-1] * (span_length - 1)
         tokens = tokens[tokens != -1]
-        targets = [self.tokenizer.begin]
+        targets = [self.tokenizer.convert_tokens_to_ids("<B>")]
         for i in range(num_corrupt_seqs):
             targets.append(self.tokenizer.mask_token)
-            targets.append(self.tokenizer.space)
-        targets.append(self.tokenizer.end)
+            targets.append(self.tokenizer.convert_tokens_to_ids("<S>"))
+        targets.append(self.tokenizer.convert_tokens_to_ids("<E>"))
         return tokens, targets
 
     def sequential_denoising(self, tokens):
         # Implement sequential denoising (PrefixLM) task
         # Noise is sampled from the start of the text to a randomly sampled point
-        tokens.insert(0, self.tokenizer.sequential)
+        tokens.insert(0, self.tokenizer.convert_tokens_to_ids("[S]"))
         if len(tokens) > self.config.block_size:
             tokens = tokens[:self.config.block_size]
         span_length = random.randint(0, len(tokens) - 1)
         tokens[span_length] = self.tokenizer.mask_token
         tokens[span_length + 1:] = [-1] * (span_length - 1)
         tokens = tokens[tokens != -1]
-        targets = [self.tokenizer.begin, self.tokenizer.mask_token, self.tokenizer.end]
+        targets = [self.tokenizer.convert_tokens_to_ids("<B>"), self.tokenizer.mask_token, self.tokenizer.convert_tokens_to_ids("<E>")]
         return tokens, targets
 
     def __getitem__(self, idx):
