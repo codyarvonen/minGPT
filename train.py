@@ -137,9 +137,6 @@ class TextDataset(Dataset):
 
             chunk = tokens[:self.config.block_size]
 
-            # Pad the chunk if it is smaller than the block size
-            if len(chunk) < self.config.block_size:
-                chunk += [self.tokenizer.eos_token_id] * (self.config.block_size - len(chunk))
 
             masked_tokens = []
             target = []
@@ -153,6 +150,13 @@ class TextDataset(Dataset):
 
             print(masked_tokens, target)
             
+            # Pad the chunk if it is smaller than the block size
+            if len(masked_tokens) < self.config.block_size:
+                masked_tokens += [self.tokenizer.eos_token_id] * (self.config.block_size - len(masked_tokens))
+
+            # if len(target) < self.config.block_size:
+            #     target += [self.tokenizer.eos_token_id] * (self.config.block_size - len(target))
+
             # return as tensors
             x = torch.tensor(masked_tokens, dtype=torch.long)
             y = torch.tensor(target, dtype=torch.long)
