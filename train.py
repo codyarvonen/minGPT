@@ -141,7 +141,7 @@ class TextDataset(Dataset):
             if len(chunk) < self.config.block_size:
                 chunk += [self.tokenizer.eos_token_id] * (self.config.block_size - len(chunk))
 
-            masked_tokens, target = []
+            masked_tokens, target = [], []
             # Apply denoising tasks
             if random.random() < 0.5:
                 masked_tokens, target = self.sequential_denoising(chunk)
