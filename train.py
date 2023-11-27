@@ -22,7 +22,7 @@ class TextDataset(Dataset):
         C.vocab_size = 50257
         C.block_size = 1024
         C.data_path = 'pile_data_10.jsonl'
-        C.tokenizer_path = 'tokenizer_weights_2.pt'
+        C.tokenizer_path = 'tokenizer_weights_3.pt'
         C.perform_denoising = False
 
         return C
@@ -144,8 +144,8 @@ class TextDataset(Dataset):
             if len(chunk) < self.config.block_size:
                 chunk += [self.tokenizer.eos_token_id] * (self.config.block_size - len(chunk))
 
-            assert len(masked_tokens) == self.config.block_size
-            assert len(chunk) == self.config.block_size
+            assert len(masked_tokens) == self.config.block_size, f"len(masked_tokens) is {len(masked_tokens)}"
+            assert len(chunk) == self.config.block_size, f"len(chunk) is {len(chunk)}"
 
             # return as tensors
             x = torch.tensor(masked_tokens, dtype=torch.long)
@@ -159,7 +159,7 @@ def train():
     model_config.model_type = 'gpt-mini'
     model_config.vocab_size = 50257 + 1182
     model_config.block_size = 1024
-    model_config.checkpoint_path = 'checkpoint_3999.pt'
+    model_config.checkpoint_path = None
     model_config.use_causal_attention_mask = False
     model = GPT(model_config)
 
@@ -171,7 +171,7 @@ def train():
     print("Starting training")
     train_config = Trainer.get_default_config()
     train_config.learning_rate = 5e-4
-    train_config.max_iters = 8000
+    train_config.max_iters = 5000
     train_config.batch_size = 16
     train_config.save_iterations = 500
     trainer = Trainer(train_config, model, train_dataset)
