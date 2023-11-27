@@ -38,7 +38,7 @@ class TextDataset(Dataset):
         # special_tokens_dict = {"regular": "[R]", "sequential": "[S]", "extreme": "[X]", "begin": "<B>", "space": "<S>", "end": "<E>"}
         # self.tokenizer.add_special_tokens(special_tokens_dict)
 
-        self.tokenizer.add_tokens(["[R]", "[S]", "[X]", "<B>", "<S>", "<E>"], special_tokens=True)
+        self.tokenizer.add_tokens(["[R]", "[S]", "[X]", "<B>", "<M>", "<S>", "<E>"], special_tokens=True)
         # Notice: resize_token_embeddings expect to receive the full size of the new vocabulary, i.e., the length of the tokenizer.
         # model.resize_token_embeddings(len(tokenizer))
 
@@ -67,12 +67,12 @@ class TextDataset(Dataset):
         num_corrupt_seqs = int(corruption_rate * len(tokens) / span_length)
         corrupt_indices = random.sample(range(len(tokens) - span_length), num_corrupt_seqs)
         for idx in corrupt_indices:
-            tokens[idx] = [self.tokenizer.mask_token]
+            tokens[idx] = [self.tokenizer.convert_tokens_to_ids("<M>")]
             tokens[idx + 1:idx + span_length] = [-1] * (span_length - 1)
         tokens = tokens[tokens != -1]
         targets = [self.tokenizer.convert_tokens_to_ids("<B>")]
         for i in range(num_corrupt_seqs):
-            targets.append(self.tokenizer.mask_token)
+            targets.append(self.tokenizer.convert_tokens_to_ids("<M>"))
             targets.append(self.tokenizer.convert_tokens_to_ids("<S>"))
         targets.append(self.tokenizer.convert_tokens_to_ids("<E>"))
         return tokens, targets
@@ -94,12 +94,12 @@ class TextDataset(Dataset):
         num_corrupt_seqs = int(corruption_rate * len(tokens) / span_length)
         corrupt_indices = random.sample(range(len(tokens) - span_length), num_corrupt_seqs)
         for idx in corrupt_indices:
-            tokens[idx] = [self.tokenizer.mask_token]
+            tokens[idx] = [self.tokenizer.convert_tokens_to_ids("<M>")]
             tokens[idx + 1:idx + span_length] = [-1] * (span_length - 1)
         tokens = tokens[tokens != -1]
         targets = [self.tokenizer.convert_tokens_to_ids("<B>")]
         for i in range(num_corrupt_seqs):
-            targets.append(self.tokenizer.mask_token)
+            targets.append(self.tokenizer.convert_tokens_to_ids("<M>"))
             targets.append(self.tokenizer.convert_tokens_to_ids("<S>"))
         targets.append(self.tokenizer.convert_tokens_to_ids("<E>"))
         return tokens, targets
@@ -111,10 +111,10 @@ class TextDataset(Dataset):
         if len(tokens) > self.config.block_size:
             tokens = tokens[:self.config.block_size]
         span_length = random.randint(0, len(tokens) - 1)
-        tokens[span_length] = self.tokenizer.mask_token
+        tokens[span_length] = self.tokenizer.convert_tokens_to_ids("<M>")
         tokens[span_length + 1:] = [-1] * (span_length - 1)
         tokens = tokens[tokens != -1]
-        targets = [self.tokenizer.convert_tokens_to_ids("<B>"), self.tokenizer.mask_token, self.tokenizer.convert_tokens_to_ids("<E>")]
+        targets = [self.tokenizer.convert_tokens_to_ids("<B>"), self.tokenizer.convert_tokens_to_ids("<M>"), self.tokenizer.convert_tokens_to_ids("<E>")]
         return tokens, targets
 
     def __getitem__(self, idx):
