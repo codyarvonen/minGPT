@@ -141,7 +141,8 @@ class TextDataset(Dataset):
             if len(chunk) < self.config.block_size:
                 chunk += [self.tokenizer.eos_token_id] * (self.config.block_size - len(chunk))
 
-            masked_tokens, target = [], []
+            masked_tokens = []
+            target = []
             # Apply denoising tasks
             if random.random() < 0.5:
                 masked_tokens, target = self.sequential_denoising(chunk)
@@ -149,6 +150,8 @@ class TextDataset(Dataset):
                 masked_tokens, target = self.extreme_denoising(chunk)
             else:
                 masked_tokens, target = self.regular_denoising(chunk)
+
+            print(masked_tokens, target)
             
             # return as tensors
             x = torch.tensor(masked_tokens, dtype=torch.long)
