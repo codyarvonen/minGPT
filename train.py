@@ -154,8 +154,8 @@ class TextDataset(Dataset):
             if len(masked_tokens) < self.config.block_size:
                 masked_tokens += [self.tokenizer.eos_token_id] * (self.config.block_size - len(masked_tokens))
 
-            # if len(target) < self.config.block_size:
-            #     target += [self.tokenizer.eos_token_id] * (self.config.block_size - len(target))
+            if len(target) < self.config.block_size:
+                target += [self.tokenizer.eos_token_id] * (self.config.block_size - len(target))
 
             # return as tensors
             x = torch.tensor(masked_tokens, dtype=torch.long)
