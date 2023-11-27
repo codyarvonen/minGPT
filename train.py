@@ -162,7 +162,7 @@ def train():
     model_config.model_type = 'gpt-mini'
     model_config.vocab_size = 50263
     model_config.block_size = 1024
-    model_config.checkpoint_path = None
+    model_config.checkpoint_path = 'checkpoint_1999.pt'
     model = GPT(model_config)
 
     print("Loading dataset")
@@ -172,7 +172,7 @@ def train():
     print("Starting training")
     train_config = Trainer.get_default_config()
     train_config.learning_rate = 5e-4
-    train_config.max_iters = 2000
+    train_config.max_iters = 4000
     train_config.batch_size = 16
     train_config.save_iterations = 100
     trainer = Trainer(train_config, model, train_dataset)

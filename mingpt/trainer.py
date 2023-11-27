@@ -77,7 +77,7 @@ class Trainer:
         )
         
         model.train()
-        self.iter_num = 0
+        self.iter_num = 2000
         self.iter_time = time.time()
         data_iter = iter(train_loader)
         pbar = tqdm()
