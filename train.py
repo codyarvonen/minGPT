@@ -99,10 +99,10 @@ class TextDataset(Dataset):
         # Implement sequential denoising (PrefixLM) task
         # Noise is sampled from the start of the text to a randomly sampled point
         tokens.insert(0, self.tokenizer.convert_tokens_to_ids("[S]"))
-        if len(tokens) > self.config.block_size:
-            tokens = tokens[:self.config.block_size]
         span_length = random.randint(0, len(tokens) - 1)
         tokens[span_length:] = [self.tokenizer.convert_tokens_to_ids(f"<s-noise-{x}") for x in range(len(tokens) - span_length)]
+        if len(tokens) > self.config.block_size:
+            tokens = tokens[:self.config.block_size]
         return tokens
 
     def __getitem__(self, idx):
