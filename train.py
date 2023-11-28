@@ -61,8 +61,6 @@ class TextDataset(Dataset):
         # Implement regular span corruption task
         # Sample spans with a mean length of 3 and corruption rate of 15%
         tokens.insert(0, self.tokenizer.convert_tokens_to_ids("[R]"))
-        if len(tokens) > self.config.block_size:
-            tokens = tokens[:self.config.block_size]
 
         span_length = max(2, int(random.gauss(3, 1)))
         corruption_rate = 0.15
@@ -71,14 +69,15 @@ class TextDataset(Dataset):
         for n, idx in enumerate(corrupt_indices):
             if (idx + span_length) < len(tokens):
                 tokens[idx:idx + span_length] = [self.tokenizer.convert_tokens_to_ids(f"<r-noise-{x}") for x in range(n * span_length, (n * span_length) + span_length)]
+        if len(tokens) > self.config.block_size:
+            tokens = tokens[:self.config.block_size]
         return tokens
 
     def extreme_denoising(self, tokens):
         # Implement extreme denoising task
         # Sample spans with a mean length of 32 or corruption rate of up to 50%
         tokens.insert(0, self.tokenizer.convert_tokens_to_ids("[X]"))
-        if len(tokens) > self.config.block_size:
-            tokens = tokens[:self.config.block_size]
+
         corruption_rate = 0.5
         if random.random() < 0.5:
             span_length = max(2, int(random.gauss(32, 1)))
@@ -92,6 +91,8 @@ class TextDataset(Dataset):
         for n, idx in enumerate(corrupt_indices):
             if (idx + span_length) < len(tokens):
                 tokens[idx:idx + span_length] = [self.tokenizer.convert_tokens_to_ids(f"<x-noise-{x}") for x in range(n * span_length, (n * span_length) + span_length)]
+        if len(tokens) > self.config.block_size:
+            tokens = tokens[:self.config.block_size]
         return tokens
 
     def sequential_denoising(self, tokens):
