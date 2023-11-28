@@ -69,7 +69,8 @@ class TextDataset(Dataset):
         num_corrupt_seqs = int(corruption_rate * len(tokens) / span_length)
         corrupt_indices = random.sample(range(len(tokens) - span_length), num_corrupt_seqs)
         for n, idx in enumerate(corrupt_indices):
-            tokens[idx:idx + span_length] = [self.tokenizer.convert_tokens_to_ids(f"<r-noise-{x}") for x in range(n * span_length, (n * span_length) + span_length)]
+            if (idx + span_length) < len(tokens):
+                tokens[idx:idx + span_length] = [self.tokenizer.convert_tokens_to_ids(f"<r-noise-{x}") for x in range(n * span_length, (n * span_length) + span_length)]
         return tokens
 
     def extreme_denoising(self, tokens):
@@ -89,7 +90,8 @@ class TextDataset(Dataset):
         num_corrupt_seqs = int(corruption_rate * len(tokens) / span_length)
         corrupt_indices = random.sample(range(len(tokens) - span_length), num_corrupt_seqs)
         for n, idx in enumerate(corrupt_indices):
-            tokens[idx:idx + span_length] = [self.tokenizer.convert_tokens_to_ids(f"<x-noise-{x}") for x in range(n * span_length, (n * span_length) + span_length)]
+            if (idx + span_length) < len(tokens):
+                tokens[idx:idx + span_length] = [self.tokenizer.convert_tokens_to_ids(f"<x-noise-{x}") for x in range(n * span_length, (n * span_length) + span_length)]
         return tokens
 
     def sequential_denoising(self, tokens):
