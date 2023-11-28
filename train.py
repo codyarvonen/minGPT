@@ -69,8 +69,6 @@ class TextDataset(Dataset):
         for n, idx in enumerate(corrupt_indices):
             if (idx + span_length) < len(tokens):
                 tokens[idx:idx + span_length] = [self.tokenizer.convert_tokens_to_ids(f"<r-noise-{x}") for x in range(n * span_length, (n * span_length) + span_length)]
-        if len(tokens) > self.config.block_size:
-            tokens = tokens[:self.config.block_size]
         return tokens
 
     def extreme_denoising(self, tokens):
@@ -91,8 +89,6 @@ class TextDataset(Dataset):
         for n, idx in enumerate(corrupt_indices):
             if (idx + span_length) < len(tokens):
                 tokens[idx:idx + span_length] = [self.tokenizer.convert_tokens_to_ids(f"<x-noise-{x}") for x in range(n * span_length, (n * span_length) + span_length)]
-        if len(tokens) > self.config.block_size:
-            tokens = tokens[:self.config.block_size]
         return tokens
 
     def sequential_denoising(self, tokens):
@@ -101,8 +97,6 @@ class TextDataset(Dataset):
         tokens.insert(0, self.tokenizer.convert_tokens_to_ids("[S]"))
         span_length = random.randint(0, len(tokens) - 1)
         tokens[span_length:] = [self.tokenizer.convert_tokens_to_ids(f"<s-noise-{x}") for x in range(len(tokens) - span_length)]
-        if len(tokens) > self.config.block_size:
-            tokens = tokens[:self.config.block_size]
         return tokens
 
     def __getitem__(self, idx):
@@ -146,6 +140,12 @@ class TextDataset(Dataset):
 
             if len(chunk) < self.config.block_size:
                 chunk += [self.tokenizer.eos_token_id] * (self.config.block_size - len(chunk))
+
+            if len(masked_tokens) > self.config.block_size:
+                masked_tokens = masked_tokens[:self.config.block_size]
+
+            if len(chunk) > self.config.block_size:
+                chunk = chunk[:self.config.block_size]
 
             assert len(masked_tokens) == self.config.block_size, f"len(masked_tokens) is {len(masked_tokens)}"
             assert len(chunk) == self.config.block_size, f"len(chunk) is {len(chunk)}"
