@@ -57,8 +57,8 @@ class ActivityDataset(Dataset):
         y = x[1:] + ([[0, 0, 0, 0, 0, 0]] * (self.config.block_size - len(x) + 1))
 
         # return as tensors
-        x = torch.tensor(x, dtype=torch.long)
-        y = torch.tensor(y, dtype=torch.long)
+        x = torch.tensor(x, dtype=torch.float)
+        y = torch.tensor(y, dtype=torch.float)
         return x, y
         
 
