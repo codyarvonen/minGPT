@@ -44,12 +44,11 @@ class CausalSelfAttention(nn.Module):
         self.attn_dropout = nn.Dropout(config.attn_pdrop)
         self.resid_dropout = nn.Dropout(config.resid_pdrop)
         # causal mask to ensure that attention is only applied to the left in the input sequence
-        if config.use_causal_attention_mask:
-            self.register_buffer("bias", torch.tril(torch.ones(config.block_size, config.block_size))
-                                        .view(1, 1, config.block_size, config.block_size))
-        else:
-            self.register_buffer("bias", torch.ones(config.block_size, config.block_size)
-                                        .view(1, 1, config.block_size, config.block_size))
+        self.register_buffer("bias", torch.tril(torch.ones(config.block_size, config.block_size))
+                                    .view(1, 1, config.block_size, config.block_size))
+        # else:
+        #     self.register_buffer("bias", torch.ones(config.block_size, config.block_size)
+        #                                 .view(1, 1, config.block_size, config.block_size))
         self.n_head = config.n_head
         self.n_embd = config.n_embd
 
@@ -108,7 +107,7 @@ class GPT(nn.Module):
         C.n_head = None
         C.n_embd =  None
         # these options must be filled in externally
-        C.vocab_size = None
+        C.num_features = None
         C.block_size = None
         # dropout hyperparameters
         C.embd_pdrop = 0.1
@@ -120,7 +119,7 @@ class GPT(nn.Module):
 
     def __init__(self, config):
         super().__init__()
-        assert config.vocab_size is not None
+        assert config.num_features is not None
         assert config.block_size is not None
         self.block_size = config.block_size
 
@@ -148,18 +147,21 @@ class GPT(nn.Module):
             }[config.model_type])
 
         self.transformer = nn.ModuleDict(dict(
-            wte = nn.Embedding(config.vocab_size, config.n_embd),
+            # wte = nn.Embedding(config.num_features, config.n_embd),
+            wte = nn.Linear(config.num_features, config.n_embd),
             wpe = nn.Embedding(config.block_size, config.n_embd),
+            # wpe = nn.Embedding(config.block_size, config.num_features),
             drop = nn.Dropout(config.embd_pdrop),
             h = nn.ModuleList([Block(config) for _ in range(config.n_layer)]),
             ln_f = nn.LayerNorm(config.n_embd),
         ))
-        self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=False)
+        # self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=False)
+        self.model_head = nn.Linear(config.n_embd, config.num_features)
         
         if config.checkpoint_path is not None:
             self.checkpoint = torch.load(config.checkpoint_path)
             self.transformer.load_state_dict(self.checkpoint['model_transformer'])
-            self.lm_head.load_state_dict(self.checkpoint['model_lm_head'])
+            self.model_head.load_state_dict(self.checkpoint['model_head'])
         else:
             self.checkpoint = None
 
@@ -276,23 +278,27 @@ class GPT(nn.Module):
 
     def forward(self, idx, targets=None):
         device = idx.device
-        b, t = idx.size()
+        # print(idx)
+        # print(idx.size())
+        b, t, f = idx.size()
         assert t <= self.block_size, f"Cannot forward sequence of length {t}, block size is only {self.block_size}"
         pos = torch.arange(0, t, dtype=torch.long, device=device).unsqueeze(0) # shape (1, t)
 
         # forward the GPT model itself
-        tok_emb = self.transformer.wte(idx) # token embeddings of shape (b, t, n_embd)
+        tok_emb = self.transformer.wte(idx.float()) # token embeddings of shape (b, t, n_embd)
+        # tok_emb = idx
         pos_emb = self.transformer.wpe(pos) # position embeddings of shape (1, t, n_embd)
         x = self.transformer.drop(tok_emb + pos_emb)
         for block in self.transformer.h:
             x = block(x)
         x = self.transformer.ln_f(x)
-        logits = self.lm_head(x)
+        logits = self.model_head(x)
 
         # if we are given some desired targets also calculate the loss
         loss = None
         if targets is not None:
-            loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1)
+            # loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1)
+            loss = F.mse_loss(logits, targets)
 
         return logits, loss
 

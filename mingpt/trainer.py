@@ -77,7 +77,7 @@ class Trainer:
         )
         
         model.train()
-        self.iter_num = 2000
+        # self.iter_num = 2000
         self.iter_time = time.time()
         data_iter = iter(train_loader)
         pbar = tqdm()
@@ -111,7 +111,7 @@ class Trainer:
             
             if self.iter_num % config.save_iterations == config.save_iterations - 1:
                 torch.save({'model_transformer': model.transformer.state_dict(), 
-                            'model_lm_head': model.lm_head.state_dict(), 
+                            'model_head': model.model_head.state_dict(), 
                             'optimizer_state_dict': self.optimizer.state_dict()}, 
                            f'checkpoint_{self.iter_num}.pt')
                 with open('loss.pkl', 'wb') as file:
